@@ -8,18 +8,23 @@ public class PlayerControll : MonoBehaviour
     [SerializeField] float jumpForce = 5.0f; // ジャンプ力
 
     public GroundCheck3D rightGround, leftGround;
-    public bool onGround;
+    public float LandingSpeed = 0.01f;
+    public float Ignore = 1e-5f;
 
     private float inputHorizontal;
     private float inputVertical;
     private Rigidbody playerRb;//プレイヤーのRigidbody
-    private Vector3 moveSpeed;//プレイヤーの移動速度
     private Vector3 cameraForward;
     private Vector3 moveForward;
-    private bool isGrounded; // 接地判定
-    private bool Jumpping = false;  // ジャンプ中か判定
-
     private Animator animator;
+    private bool onGround;
+    private bool isGrounded = true; // 接地判定
+    private bool isJumping = false;  // ジャンプ中か判定
+    private bool isFalling = false;
+    private bool isSpaceKey = false;
+    private bool isRunning = false;
+
+    private int counter = 0;
 
     void Start()
     {
@@ -29,6 +34,8 @@ public class PlayerControll : MonoBehaviour
 
     void Update()
     {
+        animator.ResetTrigger("Landing");
+        if (OnGround() && onGround && isSpaceKey == false) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
         //------プレイヤーの移動------
 
         //カメラに対して前を取得
@@ -39,62 +46,72 @@ public class PlayerControll : MonoBehaviour
         inputHorizontal = Input.GetAxisRaw("Horizontal");
         inputVertical = Input.GetAxisRaw("Vertical");
 
-        // isGrounded = Physics.CheckSphere(groundCheck_L.position, 0.1f, groundLayer) || Physics.CheckSphere(groundCheck_R.position, 0.1f, groundLayer);
-        OnGround();
-        // Debug.Log("Jumpping:" + Jumpping);
-        Debug.Log("onGround:" + onGround);
-
-        // ジャンプ処理
-        if (onGround)
+        // OnGround();
+        // 移動処理
+        if (isSpaceKey == false)
         {
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                playerRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            }
-        }
-
-
-        // アニメーション処理
-        if (onGround)
-        {
-            // animator.SetBool("Jump", false);
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.D))
             {
-                // animator.SetBool("Run", true);
-                // animator.SetBool("Wait", false);
-                animator.Play("Base Layer.RUN00_F");
-
+                isRunning = true;
+                SetExclusiveBool(animator, "Run");
+                // animator.Play("Base Layer.RUN00_F");
             }
             else
             {
-                // animator.SetBool("Run", false);
-                // animator.SetBool("Wait", true);
-                animator.Play("Base Layer.WAIT01");
+                isRunning = false;
+                SetExclusiveBool(animator, "Idle");
+                // animator.Play("Base Layer.WAIT01");
+            }
+        }
+        if (onGround == false)
+        {
+            // if (isJumping) SetExclusiveBool(animator, "Jump");
+            if (playerRb.velocity.y < 0)
+            {
+                isFalling = true;
+                SetExclusiveBool(animator, "Fall");
+            }
+            // if (Mathf.Abs(playerRb.velocity.y) < Ignore && isFalling)
+            if (playerRb.velocity.y == 0 && isFalling)
+            {
+                Debug.Log("SetTrigger");
+                animator.SetTrigger("Landing");
+                animator.SetBool("Fall", false);
+                onGround = true;
+                isFalling = false;
+                isJumping = false;
+                isSpaceKey = false;
+                // playerRb.constraints |= RigidbodyConstraints.FreezePositionY;
+                // playerRb.useGravity = false;
             }
         }
         else
         {
-            // animator.SetBool("Jump", true);
-            // animator.SetBool("Run", false);
-            // animator.SetBool("Wait", false);
-            animator.Play("Base Layer.JUMP00");
+            if (playerRb.velocity.y < 0 && isJumping == false)
+            {
+                Debug.Log("Just Fall");
+                onGround = false;
+            }
         }
 
-        //moveVelocityを0で初期化する
-        moveSpeed = Vector3.zero;
+        // Debug.Log("onGround:"+onGround);
+        // Debug.Log("isJumping"+isJumping);
+        if (isSpaceKey == false)
+        {
+            if (isJumping == false && Input.GetKeyDown(KeyCode.Space))
+            {
+                Debug.Log("GetSpaceKey");
+                SetExclusiveBool(animator, "Jump");
+                // playerRb.useGravity = true;
+                // playerRb.constraints &= ~RigidbodyConstraints.FreezePositionY;
+                playerRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+                isSpaceKey = true;
+                // isJumping = true;
+                // onGround = false;
+                // animator.Play("Base Layer.JUMP00");
+            }
+        }
 
-        // プレイヤーのジャンプ
-        //     if (isGrounded && Input.GetKeyDown(KeyCode.Space))
-        //     {
-        //         playerRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-        //     }
-        //     else if (isGrounded && Jumpping)
-        //     {
-
-        //         animator.SetBool("Jump", false);
-        //         Jumpping = false;
-        //     }
-        // }
     }
 
     // 移動処理 回転処理
@@ -103,7 +120,7 @@ public class PlayerControll : MonoBehaviour
         cameraForward = Vector3.Scale(Camera.main.transform.forward, new Vector3(1, 0, 1)).normalized;  // 正面判定
         moveForward = cameraForward * inputVertical + Camera.main.transform.right * inputHorizontal;    // 移動量計算
         playerRb.velocity = moveForward * moveSpeedIn + new Vector3(0, playerRb.velocity.y, 0);         // 移動
-
+        // Debug.Log("Fixed: "+playerRb.velocity.y);
         // Vector3.zero = 移動量が0
         if (moveForward != Vector3.zero)
         {
@@ -111,17 +128,40 @@ public class PlayerControll : MonoBehaviour
         }
     }
 
-    private void OnGround()
+    private bool OnGround()
     {
+        // Debug.Log("OnGround Called");
         if (rightGround.CheckGroundStatus() || leftGround.CheckGroundStatus())
         {
-            onGround = true;
+            return true;
         }
         else
         {
-            onGround = false;
+            return false;
         }
         // Debug.Log("onGround: " + onGround);
+    }
+
+    void SetExclusiveBool(Animator animator, string targetBoolName)
+    {
+        // 全てのパラメーターを取得
+        foreach (AnimatorControllerParameter parameter in animator.parameters)
+        {
+            // パラメーターがBool型か確認
+            if (parameter.type == AnimatorControllerParameterType.Bool)
+            {
+                // ターゲットのBool以外はfalseに設定
+                animator.SetBool(parameter.name, parameter.name == targetBoolName);
+            }
+        }
+    }
+
+    private void Jump()
+    {
+        Debug.Log("Jump Called");
+        isRunning = false;
+        onGround = false;
+        isJumping = true;
     }
 }
 

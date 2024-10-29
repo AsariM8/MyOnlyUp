@@ -10,7 +10,7 @@ public class GroundCheck3D : MonoBehaviour
     [SerializeField] Vector3 offset = new Vector3(0, 0.1f, 0f);
     private Vector3 direction, position;
     // Rayの長さ
-    [SerializeField] float distance = 0.35f;
+    [SerializeField] float distance = 1.0f;
     /*
     Boolで返す。
     Rayの範囲にgroundLayersで指定したレイヤーが存在するかどうか
@@ -20,7 +20,8 @@ public class GroundCheck3D : MonoBehaviour
         // Rayの方向。足下なのでdown
         direction = Vector3.down;
         // Rayの始点。原点 + offset
-        position = transform.position + offset;
+        // position = transform.position + offset;
+        position = transform.position;
         Ray ray = new Ray(position, direction);
         // RayをGizmoで確認するためのDrawRay
         Debug.DrawRay(position, direction * distance, Color.red);
