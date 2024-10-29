@@ -8,23 +8,17 @@ public class PlayerControll : MonoBehaviour
     [SerializeField] float jumpForce = 5.0f; // ジャンプ力
 
     public GroundCheck3D rightGround, leftGround;
-    public float LandingSpeed = 0.01f;
-    public float Ignore = 1e-5f;
-
     private float inputHorizontal;
     private float inputVertical;
-    private Rigidbody playerRb;//プレイヤーのRigidbody
+    private Rigidbody playerRb; //プレイヤーのRigidbody
     private Vector3 cameraForward;
     private Vector3 moveForward;
     private Animator animator;
     private bool onGround;
-    private bool isGrounded = true; // 接地判定
     private bool isJumping = false;  // ジャンプ中か判定
     private bool isFalling = false;
     private bool isSpaceKey = false;
     private bool isRunning = false;
-
-    private int counter = 0;
 
     void Start()
     {
@@ -35,6 +29,7 @@ public class PlayerControll : MonoBehaviour
     void Update()
     {
         animator.ResetTrigger("Landing");
+        Debug.Log(onGround);
         if (OnGround() && onGround && isSpaceKey == false) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
         //------プレイヤーの移動------
 
@@ -48,7 +43,7 @@ public class PlayerControll : MonoBehaviour
 
         // OnGround();
         // 移動処理
-        if (isSpaceKey == false)
+        if (isSpaceKey == false && onGround)
         {
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.D))
             {
@@ -91,6 +86,7 @@ public class PlayerControll : MonoBehaviour
             {
                 Debug.Log("Just Fall");
                 onGround = false;
+                isRunning = false;
             }
         }
 
@@ -102,8 +98,6 @@ public class PlayerControll : MonoBehaviour
             {
                 Debug.Log("GetSpaceKey");
                 SetExclusiveBool(animator, "Jump");
-                // playerRb.useGravity = true;
-                // playerRb.constraints &= ~RigidbodyConstraints.FreezePositionY;
                 playerRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
                 isSpaceKey = true;
                 // isJumping = true;
