@@ -2649,7 +2649,7 @@ ModelImporter:
       loopTime: 0
       loopBlend: 0
       loopBlendOrientation: 0
-      loopBlendPositionY: 1
+      loopBlendPositionY: 0
       loopBlendPositionXZ: 0
       keepOriginalOrientation: 0
       keepOriginalPositionY: 1
@@ -2968,7 +2968,7 @@ ModelImporter:
       takeName: Take 001
       internalID: 6641085478485924818
       firstFrame: 34
-      lastFrame: 40
+      lastFrame: 36
       wrapMode: 0
       orientationOffsetY: 0
       level: 0

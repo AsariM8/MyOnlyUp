@@ -14,25 +14,35 @@ public class PlayerControll : MonoBehaviour
     private Vector3 cameraForward;
     private Vector3 moveForward;
     private Animator animator;
-    private bool onGround;
+    private bool onGround = true;
     private bool isJumping = false;  // ジャンプ中か判定
     private bool isFalling = false;
     private bool isSpaceKey = false;
     private bool isRunning = false;
+    private float currentspeed = 0.0f;
+    private float lastspeed = 0.0f;
 
     void Start()
     {
         playerRb = GetComponent<Rigidbody>();
+        playerRb.sleepThreshold = 0.1f; // スリープ閾値を調整（デフォルトは0.005f）
         animator = GetComponent<Animator>();
+
     }
 
     void Update()
     {
         animator.ResetTrigger("Landing");
-        Debug.Log(onGround);
-        if (OnGround() && onGround && isSpaceKey == false) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
-        //------プレイヤーの移動------
 
+        // 走行中に発生する微小なy速度の打ち消し
+        lastspeed = currentspeed;
+        currentspeed = playerRb.velocity.y;
+        // if (isFalling && Mathf.Abs(currentspeed - lastspeed) < 0.000001f) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
+        if (OnGround() && onGround && isSpaceKey == false) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
+        if (playerRb.velocity.y < 0) Debug.Log("y < 0");
+        Debug.Log("onGround: " + onGround);
+
+        //------プレイヤーの移動------
         //カメラに対して前を取得
         Vector3 cameraForward = Vector3.Scale(Camera.main.transform.forward, new Vector3(1, 0, 1)).normalized;
         //カメラに対して右を取得
@@ -41,7 +51,6 @@ public class PlayerControll : MonoBehaviour
         inputHorizontal = Input.GetAxisRaw("Horizontal");
         inputVertical = Input.GetAxisRaw("Vertical");
 
-        // OnGround();
         // 移動処理
         if (isSpaceKey == false && onGround)
         {
@@ -49,24 +58,20 @@ public class PlayerControll : MonoBehaviour
             {
                 isRunning = true;
                 SetExclusiveBool(animator, "Run");
-                // animator.Play("Base Layer.RUN00_F");
             }
             else
             {
                 isRunning = false;
                 SetExclusiveBool(animator, "Idle");
-                // animator.Play("Base Layer.WAIT01");
             }
         }
         if (onGround == false)
         {
-            // if (isJumping) SetExclusiveBool(animator, "Jump");
             if (playerRb.velocity.y < 0)
             {
                 isFalling = true;
                 SetExclusiveBool(animator, "Fall");
             }
-            // if (Mathf.Abs(playerRb.velocity.y) < Ignore && isFalling)
             if (playerRb.velocity.y == 0 && isFalling)
             {
                 Debug.Log("SetTrigger");
@@ -76,8 +81,6 @@ public class PlayerControll : MonoBehaviour
                 isFalling = false;
                 isJumping = false;
                 isSpaceKey = false;
-                // playerRb.constraints |= RigidbodyConstraints.FreezePositionY;
-                // playerRb.useGravity = false;
             }
         }
         else
@@ -90,8 +93,6 @@ public class PlayerControll : MonoBehaviour
             }
         }
 
-        // Debug.Log("onGround:"+onGround);
-        // Debug.Log("isJumping"+isJumping);
         if (isSpaceKey == false)
         {
             if (isJumping == false && Input.GetKeyDown(KeyCode.Space))
@@ -100,9 +101,6 @@ public class PlayerControll : MonoBehaviour
                 SetExclusiveBool(animator, "Jump");
                 playerRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
                 isSpaceKey = true;
-                // isJumping = true;
-                // onGround = false;
-                // animator.Play("Base Layer.JUMP00");
             }
         }
 
@@ -114,7 +112,7 @@ public class PlayerControll : MonoBehaviour
         cameraForward = Vector3.Scale(Camera.main.transform.forward, new Vector3(1, 0, 1)).normalized;  // 正面判定
         moveForward = cameraForward * inputVertical + Camera.main.transform.right * inputHorizontal;    // 移動量計算
         playerRb.velocity = moveForward * moveSpeedIn + new Vector3(0, playerRb.velocity.y, 0);         // 移動
-        // Debug.Log("Fixed: "+playerRb.velocity.y);
+
         // Vector3.zero = 移動量が0
         if (moveForward != Vector3.zero)
         {
@@ -124,7 +122,7 @@ public class PlayerControll : MonoBehaviour
 
     private bool OnGround()
     {
-        // Debug.Log("OnGround Called");
+        Debug.Log("OnGround Called");
         if (rightGround.CheckGroundStatus() || leftGround.CheckGroundStatus())
         {
             return true;
@@ -133,7 +131,6 @@ public class PlayerControll : MonoBehaviour
         {
             return false;
         }
-        // Debug.Log("onGround: " + onGround);
     }
 
     void SetExclusiveBool(Animator animator, string targetBoolName)

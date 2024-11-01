@@ -26,7 +26,7 @@ public class CameraControll : MonoBehaviour
         diff = currentPos - pastPos;
 
         transform.position = Vector3.Lerp(transform.position, transform.position + diff, 1.0f);//カメラをプレイヤーの移動差分だけうごかすよ
-
+        // Debug.Log(transform.position - player.transform.position);
         pastPos = currentPos;
 
 
