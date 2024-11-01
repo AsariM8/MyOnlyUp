@@ -19,13 +19,14 @@ public class PlayerControll : MonoBehaviour
     private bool isFalling = false;
     private bool isSpaceKey = false;
     private bool isRunning = false;
-    private float currentspeed = 0.0f;
-    private float lastspeed = 0.0f;
+    private float yAcceleration;
+    private Vector3 lastVelocity;
 
     void Start()
     {
         playerRb = GetComponent<Rigidbody>();
-        playerRb.sleepThreshold = 0.1f; // スリープ閾値を調整（デフォルトは0.005f）
+        playerRb.sleepThreshold = 0.1f; // スリープ閾値を調整（デフォルトは0.005f)
+        lastVelocity = playerRb.velocity;
         animator = GetComponent<Animator>();
 
     }
@@ -33,11 +34,9 @@ public class PlayerControll : MonoBehaviour
     void Update()
     {
         animator.ResetTrigger("Landing");
+        // Debug.Log(playerRb.velocity.y);
 
         // 走行中に発生する微小なy速度の打ち消し
-        lastspeed = currentspeed;
-        currentspeed = playerRb.velocity.y;
-        // if (isFalling && Mathf.Abs(currentspeed - lastspeed) < 0.000001f) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
         if (OnGround() && onGround && isSpaceKey == false) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
         if (playerRb.velocity.y < 0) Debug.Log("y < 0");
         Debug.Log("onGround: " + onGround);
@@ -72,7 +71,8 @@ public class PlayerControll : MonoBehaviour
                 isFalling = true;
                 SetExclusiveBool(animator, "Fall");
             }
-            if (playerRb.velocity.y == 0 && isFalling)
+            // if (playerRb.velocity.y == 0 && isFalling)
+            if (yAcceleration == 0 && isFalling)
             {
                 Debug.Log("SetTrigger");
                 animator.SetTrigger("Landing");
@@ -118,17 +118,30 @@ public class PlayerControll : MonoBehaviour
         {
             transform.rotation = Quaternion.LookRotation(moveForward);
         }
+
+        // 現在のy方向の速度を取得
+        float currentYVelocity = playerRb.velocity.y;
+
+        // y方向の加速度を計算（加速度 = 速度の変化量 / 時間）
+        yAcceleration = (currentYVelocity - lastVelocity.y) / Time.fixedDeltaTime;
+
+        // 前フレームの速度を更新
+        lastVelocity = playerRb.velocity;
+
+        // デバッグ用に加速度を表示
+        // Debug.Log("Y方向の加速度: " + yAcceleration);
     }
 
     private bool OnGround()
     {
-        Debug.Log("OnGround Called");
         if (rightGround.CheckGroundStatus() || leftGround.CheckGroundStatus())
         {
+            Debug.Log("OnGround Called: True");
             return true;
         }
         else
         {
+            Debug.Log("OnGround Called: False");
             return false;
         }
     }
