@@ -111,7 +111,6 @@ public class PlayerControll : MonoBehaviour
         // 右辺ではInteractableObjectコンポーネントを持つすべてのオブジェクトを検索
         // InteractableObject形で格納 GetComponentと同じ役割
         InteractableObject[] interactableObjects = FindObjectsOfType<InteractableObject>();
-        Debug.Log(interactableObjects[0]);
         nearbyObject = null;
 
         foreach (var interactable in interactableObjects)

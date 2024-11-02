@@ -1,3 +1,6 @@
+
+// カメラ移動用スクリプト
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,7 +12,7 @@ public class CameraControll : MonoBehaviour
     Vector3 currentPos;//現在のカメラ位置
     Vector3 pastPos;//過去のカメラ位置
     Vector3 diff;//移動距離
-    Vector3 initdiff = new Vector3(0.16f, 1.12f, -3.75f);
+    Vector3 initdiff = new Vector3(0.16f, 1.12f, -3.75f);   // 初期偏差  開発用
 
     private void Start()
     {
@@ -26,8 +29,7 @@ public class CameraControll : MonoBehaviour
 
         diff = currentPos - pastPos;
 
-        transform.position = Vector3.Lerp(transform.position, transform.position + diff, 1.0f);//カメラをプレイヤーの移動差分だけうごかすよ
-        // Debug.Log(transform.position - player.transform.position);
+        transform.position = Vector3.Lerp(transform.position, transform.position + diff, 1.0f); //カメラをプレイヤーの移動差分だけうごかすよ
         pastPos = currentPos;
 
 
