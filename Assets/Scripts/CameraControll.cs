@@ -8,13 +8,14 @@ public class CameraControll : MonoBehaviour
 
     Vector3 currentPos;//現在のカメラ位置
     Vector3 pastPos;//過去のカメラ位置
-
     Vector3 diff;//移動距離
+    Vector3 initdiff = new Vector3(0.16f, 1.12f, -3.75f);
 
     private void Start()
     {
         //最初のプレイヤーの位置の取得
         pastPos = player.transform.position;
+        transform.position = player.transform.position + initdiff;
     }
     void Update()
     {

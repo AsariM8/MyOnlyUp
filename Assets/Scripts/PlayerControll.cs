@@ -4,44 +4,42 @@ using UnityEngine;
 
 public class PlayerControll : MonoBehaviour
 {
-    [SerializeField] float moveSpeedIn;//プレイヤーの移動速度を入力
-    [SerializeField] float jumpForce = 5.0f; // ジャンプ力
+    [SerializeField] float moveSpeedIn; // 移動スピード
+    [SerializeField] float jumpForce; // ジャンプ力
 
-    public GroundCheck3D rightGround, leftGround;
+    public GroundCheck3D rightGround, leftGround;   // 足オブジェクトによる接地判定
+    public KeyCode interactKey = KeyCode.F; // インタラクトキー
+    private InteractableObject nearbyObject = null; // インタラクト可能な付近のオブジェクト
     private float inputHorizontal;
     private float inputVertical;
-    private Rigidbody playerRb; //プレイヤーのRigidbody
+    private Rigidbody playerRb;
     private Vector3 cameraForward;
     private Vector3 moveForward;
     private Animator animator;
-    private bool onGround = true;
-    private bool isJumping = false;  // ジャンプ中か判定
-    private bool isFalling = false;
-    private bool isSpaceKey = false;
-    private bool isRunning = false;
-    private float yAcceleration;
-    private Vector3 lastVelocity;
+    private bool onGround = true;   // ゲーム内オブジェクトによらない接地判定
+    private bool isJumping = false;  // ジャンプ判定
+    private bool isFalling = false; // 落下判定
+    private bool isSpaceKey = false;    // 空中ジャンプ防止用判定
+    private bool isRunning = false; // 走行判定
+    private float yAcceleration;    // y軸方向の加速度
+    private Vector3 lastVelocity;   // 1フレーム前のy速度 加速度計算用
 
     void Start()
     {
         playerRb = GetComponent<Rigidbody>();
-        playerRb.sleepThreshold = 0.1f; // スリープ閾値を調整（デフォルトは0.005f)
-        lastVelocity = playerRb.velocity;
         animator = GetComponent<Animator>();
-
+        lastVelocity = playerRb.velocity;
     }
 
     void Update()
     {
         animator.ResetTrigger("Landing");
-        // Debug.Log(playerRb.velocity.y);
 
         // 走行中に発生する微小なy速度の打ち消し
         if (OnGround() && onGround && isSpaceKey == false) playerRb.velocity = new Vector3(playerRb.velocity.x, 0, playerRb.velocity.z);
-        if (playerRb.velocity.y < 0) Debug.Log("y < 0");
-        Debug.Log("onGround: " + onGround);
 
         //------プレイヤーの移動------
+
         //カメラに対して前を取得
         Vector3 cameraForward = Vector3.Scale(Camera.main.transform.forward, new Vector3(1, 0, 1)).normalized;
         //カメラに対して右を取得
@@ -53,28 +51,33 @@ public class PlayerControll : MonoBehaviour
         // 移動処理
         if (isSpaceKey == false && onGround)
         {
+            // 走行
             if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.D))
             {
                 isRunning = true;
                 SetExclusiveBool(animator, "Run");
             }
+            // 待機
             else
             {
                 isRunning = false;
                 SetExclusiveBool(animator, "Idle");
             }
         }
+
+        // 落下処理
         if (onGround == false)
         {
+            // y速度が負で落下モーションに移行
             if (playerRb.velocity.y < 0)
             {
                 isFalling = true;
                 SetExclusiveBool(animator, "Fall");
             }
-            // if (playerRb.velocity.y == 0 && isFalling)
-            if (yAcceleration == 0 && isFalling)
+
+            // y速度0で着地 加速の判定も加えて挙動を安定させる
+            if ((yAcceleration == 0 || playerRb.velocity.y == 0) && isFalling)
             {
-                Debug.Log("SetTrigger");
                 animator.SetTrigger("Landing");
                 animator.SetBool("Fall", false);
                 onGround = true;
@@ -83,26 +86,45 @@ public class PlayerControll : MonoBehaviour
                 isSpaceKey = false;
             }
         }
+        // ジャンプせずに落下した場合の処理
         else
         {
             if (playerRb.velocity.y < 0 && isJumping == false)
             {
-                Debug.Log("Just Fall");
                 onGround = false;
                 isRunning = false;
             }
         }
 
+        // ジャンプ入力処理
         if (isSpaceKey == false)
         {
             if (isJumping == false && Input.GetKeyDown(KeyCode.Space))
             {
-                Debug.Log("GetSpaceKey");
                 SetExclusiveBool(animator, "Jump");
                 playerRb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
                 isSpaceKey = true;
             }
         }
+
+        // シーン内のすべてのインタラクト可能オブジェクトを検索
+        // 右辺ではInteractableObjectコンポーネントを持つすべてのオブジェクトを検索
+        // InteractableObject形で格納 GetComponentと同じ役割
+        InteractableObject[] interactableObjects = FindObjectsOfType<InteractableObject>();
+        Debug.Log(interactableObjects[0]);
+        nearbyObject = null;
+
+        foreach (var interactable in interactableObjects)
+        {
+            if (interactable.IsPlayerNearby(transform))
+            {
+                nearbyObject = interactable;
+                break;
+            }
+        }
+
+        // インタラクトボタンが押され，近くにオブジェクトがある場合
+        if (nearbyObject != null && Input.GetKeyDown(interactKey)) nearbyObject.Interact();
 
     }
 
@@ -127,25 +149,17 @@ public class PlayerControll : MonoBehaviour
 
         // 前フレームの速度を更新
         lastVelocity = playerRb.velocity;
-
-        // デバッグ用に加速度を表示
-        // Debug.Log("Y方向の加速度: " + yAcceleration);
     }
 
+    // 接地判定
     private bool OnGround()
     {
-        if (rightGround.CheckGroundStatus() || leftGround.CheckGroundStatus())
-        {
-            Debug.Log("OnGround Called: True");
-            return true;
-        }
-        else
-        {
-            Debug.Log("OnGround Called: False");
-            return false;
-        }
+        if (rightGround.CheckGroundStatus() || leftGround.CheckGroundStatus()) return true;
+        else return false;
     }
 
+    // アニメーション用BoolのTrue / False 設定の効率化
+    // 引数に指定したBoolのみTrueにする
     void SetExclusiveBool(Animator animator, string targetBoolName)
     {
         // 全てのパラメーターを取得
@@ -160,9 +174,9 @@ public class PlayerControll : MonoBehaviour
         }
     }
 
+    // Jump Animation再生中に呼び出す
     private void Jump()
     {
-        Debug.Log("Jump Called");
         isRunning = false;
         onGround = false;
         isJumping = true;
